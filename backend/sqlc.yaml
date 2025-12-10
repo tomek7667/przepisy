@@ -1,0 +1,52 @@
+version: "2"
+sql:
+  - engine: "sqlite"
+    queries: "queries/*.sql"
+    schema: "schema/*.sql"
+    gen:
+      go:
+        package: "sqlc"
+        out: "internal/sqlc"
+        emit_db_tags: true
+        emit_empty_slices: true
+        emit_json_tags: true
+        emit_sql_as_comment: true
+        overrides:
+          - column: "user.password"
+            go_struct_tag: 'json:"-"'
+
+          - db_type: "INTEGER"
+            go_type: "int64"
+
+          - db_type: "INTEGER"
+            nullable: true
+            go_type:
+              type: "int64"
+              pointer: true
+
+          - db_type: "TEXT"
+            go_type: "string"
+
+          - db_type: "TEXT"
+            nullable: true
+            go_type:
+              type: "string"
+              pointer: true
+
+          - db_type: "REAL"
+            go_type: "float64"
+
+          - db_type: "REAL"
+            nullable: true
+            go_type:
+              type: "float64"
+              pointer: true
+
+          - db_type: "DATETIME"
+            go_type: "time.Time"
+
+          - db_type: "DATETIME"
+            nullable: true
+            go_type:
+              type: "time.Time"
+              pointer: true
