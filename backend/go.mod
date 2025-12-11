@@ -16,6 +16,7 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/tomek7667/go-http-helpers v1.1.0
 	github.com/tomek7667/go-multi-logger-slog v0.0.3
+	github.com/tomek7667/secrets v0.0.9
 )
 
 require (

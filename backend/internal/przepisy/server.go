@@ -2,7 +2,6 @@ package przepisy
 
 import (
 	"context"
-	"crypto/rand"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -17,6 +16,7 @@ import (
 	"github.com/tomek7667/go-http-helpers/chii"
 	"github.com/tomek7667/go-http-helpers/h"
 	"github.com/tomek7667/go-http-helpers/utils"
+	"github.com/tomek7667/secrets/secretssdk"
 )
 
 type Options struct {
@@ -32,10 +32,19 @@ type Server struct {
 	allowedOrigins []string
 	Router         chi.Router
 	auther         Auther
+	secreter       *secretssdk.Client
 }
 
-func New(address, allowedOrigins, dbPath, jwtSecret, adminPassword string) (*Server, error) {
+func New(address, allowedOrigins, dbPath string, secretsClient *secretssdk.Client) (*Server, error) {
 	ctx := context.Background()
+	jwtSecret, err := secretsClient.GetSecret("przepisy/jwt-token")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get secrets jwt token: %w", err)
+	}
+	adminPassword, err := secretsClient.GetSecret("przepisy/admin-password")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get secrets admin password: %w", err)
+	}
 	// db
 	godotenv.Load()
 	c, err := sqlite.New(ctx, dbPath)
@@ -55,25 +64,22 @@ func New(address, allowedOrigins, dbPath, jwtSecret, adminPassword string) (*Ser
 		allowedOrigins: strings.Split(allowedOrigins, ","),
 		Db:             c,
 		Router:         r,
+		secreter:       secretsClient,
 		auther: Auther{
 			Db:        c,
-			JwtSecret: jwtSecret,
+			JwtSecret: jwtSecret.Value,
 		},
 	}
 
 	if users, _ := c.Queries.ListUsers(ctx); len(users) == 0 {
 		// Use provided admin password or generate a random one
-		password := adminPassword
-		if password == "" {
-			password = rand.Text()
-		}
 		params := sqlc.CreateUserParams{
 			ID:       utils.CreateUUID(),
 			Username: "admin",
-			Password: password,
+			Password: adminPassword.Value,
 			Email:    "admin@cyber-man.pl",
 		}
-		slog.Info("no users found; creating admin user", "params", params)
+		slog.Info("no users found; creating admin user")
 		u, err := c.Queries.CreateUser(ctx, params)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create the default user: %w", err)
@@ -90,7 +96,7 @@ func New(address, allowedOrigins, dbPath, jwtSecret, adminPassword string) (*Ser
 
 func (s *Server) Serve() {
 	chii.SetupMiddlewares(s.Router, s.allowedOrigins)
-	// s.SetupRoutes()
+	s.SetupRoutes()
 	fmt.Printf("listening on address '%s'\n", s.Address)
 	chii.PrintRoutes(s.Router)
 	err := http.ListenAndServe(s.Address, s.Router)

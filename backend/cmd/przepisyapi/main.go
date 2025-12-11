@@ -1,39 +1,25 @@
 package main
 
 import (
-	"crypto/rand"
-	"fmt"
 	"log"
-	"os"
 
 	"przepisyapi/internal/przepisy"
 
 	"github.com/caarlos0/env/v11"
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
-	"github.com/tomek7667/go-http-helpers/utils"
 	"github.com/tomek7667/go-multi-logger-slog/logger"
+	"github.com/tomek7667/secrets/secretssdk"
 )
 
-type CliOptions struct {
-	Address        string `env:"SECRETS_ADDRESS" envDefault:"127.0.0.1:7771"`
-	DbPath         string `env:"SECRETS_DB_PATH" envDefault:"./przepisy.sqlite"`
-	AllowedOrigins string `env:"ALLOWED_ORIGINS"`
-	JwtSecret      string `env:"SECRETS_JWT_SECRET"`
-	AdminPassword  string `env:"SECRETS_ADMIN_PASSWORD"`
-}
+var secretsClient *secretssdk.Client
 
-func getJwtSecret() string {
-	var secret string
-	_, err := os.Stat(".jwtsecret")
-	if err == nil || os.IsExist(err) {
-		secret, _ = utils.MustReadFile(".jwtsecret")
-	} else {
-		fmt.Printf("empty jwt secret, creating .jwtsecret\n")
-		secret = rand.Text()
-		_ = os.WriteFile(".jwtsecret", []byte(secret), os.ModeAppend)
-	}
-	return secret
+type CliOptions struct {
+	Address        string `env:"ADDRESS" envDefault:"127.0.0.1:7771"`
+	DbPath         string `env:"DB_PATH" envDefault:"./przepisy.sqlite"`
+	SecretsAddress string `env:"SECRETS_ADDRESS" envDefault:"https://secrets.cyber-man.pl"`
+	SecretsToken   string `env:"SECRETS_TOKEN"`
+	AllowedOrigins string `env:"ALLOWED_ORIGINS"`
 }
 
 func main() {
@@ -50,15 +36,17 @@ func main() {
 		Use:   "secretsserver",
 		Short: "Run secrets HTTP API server",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if opts.JwtSecret == "" {
-				opts.JwtSecret = getJwtSecret()
+			var err error
+			secretsClient, err = secretssdk.New(opts.SecretsAddress, opts.SecretsToken)
+			if err != nil {
+				return err
 			}
+
 			srv, err := przepisy.New(
 				opts.Address,
 				opts.AllowedOrigins,
 				opts.DbPath,
-				opts.JwtSecret,
-				opts.AdminPassword,
+				secretsClient,
 			)
 			if err != nil {
 				return err
@@ -72,8 +60,8 @@ func main() {
 	rootCmd.Flags().StringVar(&opts.Address, "address", opts.Address, "listen address")
 	rootCmd.Flags().StringVar(&opts.DbPath, "db-path", opts.DbPath, "path to sqlite db")
 	rootCmd.Flags().StringVar(&opts.AllowedOrigins, "allowed-origins", opts.AllowedOrigins, "comma-separated list of allowed CORS origins")
-	rootCmd.Flags().StringVar(&opts.JwtSecret, "jwt-secret", opts.JwtSecret, "jwt secret used for users session")
-	rootCmd.Flags().StringVar(&opts.AdminPassword, "admin-password", opts.AdminPassword, "admin user password (generated randomly if not provided)")
+	rootCmd.Flags().StringVar(&opts.SecretsAddress, "secrets-address", opts.SecretsAddress, "address of secrets service (default local if not specified)")
+	rootCmd.Flags().StringVarP(&opts.SecretsToken, "secrets-token", "t", opts.SecretsToken, "token for retrieving secrets")
 
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatal(err)
