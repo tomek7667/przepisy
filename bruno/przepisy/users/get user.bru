@@ -1,0 +1,57 @@
+meta {
+  name: get user
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{burl}}/api/users/{{user_id}}
+  body: none
+  auth: inherit
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}
+
+assert {
+  res.status: eq 200
+  res.body.success: eq true
+  res.body.code: eq 200
+  res.body.data.id: isDefined
+  res.body.data.username: isDefined
+}
+
+tests {
+  test("should return 200 OK", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("should return success response", function() {
+    expect(res.getBody().success).to.equal(true);
+  });
+  
+  test("should return user with correct id", function() {
+    expect(res.getBody().data.id).to.be.a('string');
+    expect(res.getBody().data.username).to.be.a('string');
+  });
+}
+
+docs {
+  Example Response:
+  ```json
+  {
+    "code": 200,
+    "data": {
+      "id": "c7a5eba2-de00-4e97-872e-4caadc0b0c48",
+      "created_at": "2025-12-06T15:19:33Z",
+      "username": "admin",
+      "password": "B2BKG22UZI4WSILBAXEGM67C2L"
+    },
+    "message": "Success",
+    "statusText": "OK",
+    "success": true,
+    "ts": "2025-12-06T15:19:56.029732823Z"
+  }
+  ```
+}

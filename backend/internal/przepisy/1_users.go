@@ -1,8 +1,11 @@
 package przepisy
 
 import (
+	"fmt"
 	"net/http"
 
+	"przepisyapi/internal/crypto"
+	"przepisyapi/internal/mails"
 	"przepisyapi/internal/sqlc"
 
 	"github.com/go-chi/chi"
@@ -22,6 +25,33 @@ type UpdateUserDto struct {
 }
 
 func (s *Server) AddUsersRoutes() {
+	s.Router.Post("/api/users/register", func(w http.ResponseWriter, r *http.Request) {
+		dto, err := h.GetDto[CreateUserDto](r)
+		if err != nil {
+			h.ResBadRequest(w, err)
+			return
+		}
+		randomCode := crypto.RandCode(6)
+		newuser, err := s.Db.Queries.CreateUser(r.Context(), sqlc.CreateUserParams{
+			ID:               utils.CreateUUID(),
+			Username:         dto.Username,
+			Password:         dto.Password,
+			Email:            dto.Email,
+			EmailConfirmCode: &randomCode,
+		})
+		if err != nil {
+			h.ResErr(w, err)
+			return
+		}
+		go s.mailer.SendMail(s.agentID, mails.Options{
+			From:    "Przepisy",
+			To:      dto.Email,
+			Subject: "Potwierdź e-mail",
+			HTML:    fmt.Sprintf(`Oto kod do potwierdzenia maila: %s`, randomCode),
+		})
+		h.ResSuccess(w, newuser)
+	})
+
 	auth := s.Router.With(chii.WithAuth(s.auther))
 	auth.Route("/api/users", func(r chi.Router) {
 		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
@@ -41,25 +71,6 @@ func (s *Server) AddUsersRoutes() {
 				return
 			}
 			h.ResSuccess(w, fetchedUser)
-		})
-
-		r.Post("/", func(w http.ResponseWriter, r *http.Request) {
-			dto, err := h.GetDto[CreateUserDto](r)
-			if err != nil {
-				h.ResBadRequest(w, err)
-				return
-			}
-			newuser, err := s.Db.Queries.CreateUser(r.Context(), sqlc.CreateUserParams{
-				ID:       utils.CreateUUID(),
-				Username: dto.Username,
-				Password: dto.Password,
-				Email:    dto.Email,
-			})
-			if err != nil {
-				h.ResErr(w, err)
-				return
-			}
-			h.ResSuccess(w, newuser)
 		})
 
 		// TODO: confirmed account / admins / permissions

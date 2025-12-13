@@ -1,0 +1,50 @@
+meta {
+  name: delete user
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{burl}}/api/users/{{user_id}}
+  body: none
+  auth: inherit
+}
+
+headers {
+  Authorization: Bearer {{token}}
+}
+
+assert {
+  res.status: eq 200
+  res.body.success: eq true
+  res.body.code: eq 200
+  res.body.data: isNull
+}
+
+tests {
+  test("should return 200 OK", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+  
+  test("should return success response", function() {
+    expect(res.getBody().success).to.equal(true);
+  });
+  
+  test("should return null data", function() {
+    expect(res.getBody().data).to.be.null;
+  });
+}
+
+docs {
+  Example Response:
+  ```json
+  {
+    "code": 200,
+    "data": null,
+    "message": "Success",
+    "statusText": "OK",
+    "success": true,
+    "ts": "2025-12-06T15:17:11.968503486Z"
+  }
+  ```
+}

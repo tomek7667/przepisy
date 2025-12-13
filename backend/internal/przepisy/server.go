@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"przepisyapi/internal/mails"
 	"przepisyapi/internal/sqlc"
 	"przepisyapi/internal/sqlite"
 
@@ -33,6 +34,8 @@ type Server struct {
 	Router         chi.Router
 	auther         Auther
 	secreter       *secretssdk.Client
+	mailer         *mails.Client
+	agentID        int64
 }
 
 func New(address, allowedOrigins, dbPath string, secretsClient *secretssdk.Client) (*Server, error) {
@@ -45,6 +48,23 @@ func New(address, allowedOrigins, dbPath string, secretsClient *secretssdk.Clien
 	if err != nil {
 		return nil, fmt.Errorf("failed to get secrets admin password: %w", err)
 	}
+	mailingServiceUrl, err := secretsClient.GetSecret("common/mailing-service-url")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get mailing service url: %w", err)
+	}
+	mailingToken, err := secretsClient.GetSecret("przepisy/mailing-token")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get mailing token: %w", err)
+	}
+	mailerClient, err := mails.New(mailingServiceUrl.Value, mailingToken.Value)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize mailing client: %w", err)
+	}
+	agents, err := mailerClient.ListAgents()
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve mailer agents: %w", err)
+	}
+
 	// db
 	godotenv.Load()
 	c, err := sqlite.New(ctx, dbPath)
@@ -65,6 +85,8 @@ func New(address, allowedOrigins, dbPath string, secretsClient *secretssdk.Clien
 		Db:             c,
 		Router:         r,
 		secreter:       secretsClient,
+		mailer:         mailerClient,
+		agentID:        agents[len(agents)-1].ID,
 		auther: Auther{
 			Db:        c,
 			JwtSecret: jwtSecret.Value,
