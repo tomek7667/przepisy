@@ -22,12 +22,12 @@ SELECT * FROM user WHERE email = ? LIMIT 1;
 -- name: UpdateUser :exec
 UPDATE user
 SET 
-    username = COALESCE(?, username),
-    email = COALESCE(?, email),
-    password = COALESCE(?, password),
-    email_confirmed_at = COALESCE(?, email_confirmed_at),
-    email_confirm_code = COALESCE(?, email_confirm_code)
-WHERE id = ?;
+    username = COALESCE(sqlc.narg('username'), username),
+    email = COALESCE(sqlc.narg('email'), email),
+    password = COALESCE(sqlc.narg('password'), password),
+    email_confirmed_at = COALESCE(sqlc.narg('email_confirmed_at'), email_confirmed_at),
+    email_confirm_code = sqlc.narg('email_confirm_code')
+WHERE id = sqlc.arg('id');
 
 -- name: ConfirmEmail :exec
 UPDATE user

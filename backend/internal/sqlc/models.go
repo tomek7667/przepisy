@@ -14,6 +14,6 @@ type User struct {
 	Username         string     `db:"username" json:"username"`
 	Email            string     `db:"email" json:"email"`
 	EmailConfirmedAt *time.Time `db:"email_confirmed_at" json:"email_confirmed_at"`
-	EmailConfirmCode *string    `db:"email_confirm_code" json:"email_confirm_code"`
+	EmailConfirmCode *string    `db:"email_confirm_code" json:"-"`
 	Password         string     `db:"password" json:"-"`
 }

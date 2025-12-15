@@ -1,25 +1,22 @@
 meta {
-  name: login
+  name: confirm code
   type: http
-  seq: 2
+  seq: 3
 }
 
-post {
-  url: {{burl}}/api/login
+get {
+  url: {{burl}}/api/users/{{user_id}}/confirm?code=366700
   body: json
   auth: inherit
+}
+
+params:query {
+  code: 366700
 }
 
 headers {
   Content-Type: application/json
   ~Debug: reveal-body-logs
-}
-
-body:json {
-  {
-    "username": "testuserb",
-    "password": "TestPassword123!"
-  }
 }
 
 assert {

@@ -20,7 +20,7 @@ WHERE id = ? AND email_confirm_code = ?
 
 type ConfirmEmailParams struct {
 	ID               string  `db:"id" json:"id"`
-	EmailConfirmCode *string `db:"email_confirm_code" json:"email_confirm_code"`
+	EmailConfirmCode *string `db:"email_confirm_code" json:"-"`
 }
 
 // ConfirmEmail
@@ -52,7 +52,7 @@ type CreateUserParams struct {
 	ID               string  `db:"id" json:"id"`
 	Username         string  `db:"username" json:"username"`
 	Email            string  `db:"email" json:"email"`
-	EmailConfirmCode *string `db:"email_confirm_code" json:"email_confirm_code"`
+	EmailConfirmCode *string `db:"email_confirm_code" json:"-"`
 	Password         string  `db:"password" json:"-"`
 }
 
@@ -208,20 +208,20 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 const updateUser = `-- name: UpdateUser :exec
 UPDATE user
 SET 
-    username = COALESCE(?, username),
-    email = COALESCE(?, email),
-    password = COALESCE(?, password),
-    email_confirmed_at = COALESCE(?, email_confirmed_at),
-    email_confirm_code = COALESCE(?, email_confirm_code)
-WHERE id = ?
+    username = COALESCE(?1, username),
+    email = COALESCE(?2, email),
+    password = COALESCE(?3, password),
+    email_confirmed_at = COALESCE(?4, email_confirmed_at),
+    email_confirm_code = ?5
+WHERE id = ?6
 `
 
 type UpdateUserParams struct {
-	Username         string     `db:"username" json:"username"`
-	Email            string     `db:"email" json:"email"`
-	Password         string     `db:"password" json:"-"`
+	Username         *string    `db:"username" json:"username"`
+	Email            *string    `db:"email" json:"email"`
+	Password         *string    `db:"password" json:"-"`
 	EmailConfirmedAt *time.Time `db:"email_confirmed_at" json:"email_confirmed_at"`
-	EmailConfirmCode *string    `db:"email_confirm_code" json:"email_confirm_code"`
+	EmailConfirmCode *string    `db:"email_confirm_code" json:"-"`
 	ID               string     `db:"id" json:"id"`
 }
 
@@ -229,12 +229,12 @@ type UpdateUserParams struct {
 //
 //	UPDATE user
 //	SET
-//	    username = COALESCE(?, username),
-//	    email = COALESCE(?, email),
-//	    password = COALESCE(?, password),
-//	    email_confirmed_at = COALESCE(?, email_confirmed_at),
-//	    email_confirm_code = COALESCE(?, email_confirm_code)
-//	WHERE id = ?
+//	    username = COALESCE(?1, username),
+//	    email = COALESCE(?2, email),
+//	    password = COALESCE(?3, password),
+//	    email_confirmed_at = COALESCE(?4, email_confirmed_at),
+//	    email_confirm_code = ?5
+//	WHERE id = ?6
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
 	_, err := q.db.ExecContext(ctx, updateUser,
 		arg.Username,

@@ -29,16 +29,19 @@ type Options struct {
 type Server struct {
 	Db *sqlite.Client
 
-	Address        string
-	allowedOrigins []string
-	Router         chi.Router
-	auther         Auther
-	secreter       *secretssdk.Client
-	mailer         *mails.Client
-	agentID        int64
+	FrontendUrl            string
+	Address                string
+	allowedOrigins         []string
+	Router                 chi.Router
+	auther                 Auther
+	secreter               *secretssdk.Client
+	mailer                 *mails.Client
+	agentID                int64
+	loginRateLimiter       *h.RateLimiter
+	confirmCodeRateLimiter *h.RateLimiter
 }
 
-func New(address, allowedOrigins, dbPath string, secretsClient *secretssdk.Client) (*Server, error) {
+func New(frontendUrl, address, allowedOrigins, dbPath string, secretsClient *secretssdk.Client) (*Server, error) {
 	ctx := context.Background()
 	jwtSecret, err := secretsClient.GetSecret("przepisy/jwt-token")
 	if err != nil {
@@ -80,6 +83,7 @@ func New(address, allowedOrigins, dbPath string, secretsClient *secretssdk.Clien
 
 	// init
 	server := &Server{
+		FrontendUrl:    frontendUrl,
 		Address:        address,
 		allowedOrigins: strings.Split(allowedOrigins, ","),
 		Db:             c,
@@ -91,6 +95,8 @@ func New(address, allowedOrigins, dbPath string, secretsClient *secretssdk.Clien
 			Db:        c,
 			JwtSecret: jwtSecret.Value,
 		},
+		loginRateLimiter:       h.NewRateLimiter(5, time.Minute),
+		confirmCodeRateLimiter: h.NewRateLimiter(5, time.Minute),
 	}
 
 	if users, _ := c.Queries.ListUsers(ctx); len(users) == 0 {

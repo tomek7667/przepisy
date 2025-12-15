@@ -242,8 +242,8 @@ github.com/stretchr/testify v1.11.0/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD
 github.com/tetratelabs/wazero v1.9.0 h1:IcZ56OuxrtaEz8UYNRHBrUa9bYeX9oVY93KspZZBf/I=
 github.com/tetratelabs/wazero v1.9.0/go.mod h1:TSbcXCfFP0L2FGkRPxHphadXPjo1T6W+CseNNY7EkjM=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
-github.com/tomek7667/go-http-helpers v1.1.0 h1:jl4GQIh7TitSuv33p16CBI5SjYbNWvUVUBAmGdNWISk=
-github.com/tomek7667/go-http-helpers v1.1.0/go.mod h1:1pJyAi7snV9bVPV8p56VN8659PMJUs+xEKQY+s1lF2o=
+github.com/tomek7667/go-http-helpers v1.7.0 h1:ZKOtoh0uNOYNXJZSk10cn8axw8Usm6Jsh9z4W/2N5R8=
+github.com/tomek7667/go-http-helpers v1.7.0/go.mod h1:1pJyAi7snV9bVPV8p56VN8659PMJUs+xEKQY+s1lF2o=
 github.com/tomek7667/go-multi-logger-slog v0.0.3 h1:8guThe4ELlnsU+NVcYutN2tHcZYTsF854hU06udTIYw=
 github.com/tomek7667/go-multi-logger-slog v0.0.3/go.mod h1:ONtbze1rg82dJecM23J1IGAwUK13faprZUL8w0xzV7M=
 github.com/tomek7667/secrets v0.3.1 h1:s+VGNJGH5xt+4TEX35JGdCqnApW7cb4d4VjPePVJKyY=

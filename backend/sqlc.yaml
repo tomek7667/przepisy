@@ -15,6 +15,9 @@ sql:
           - column: "user.password"
             go_struct_tag: 'json:"-"'
 
+          - column: "user.email_confirm_code"
+            go_struct_tag: 'json:"-"'
+
           - db_type: "INTEGER"
             go_type: "int64"
 

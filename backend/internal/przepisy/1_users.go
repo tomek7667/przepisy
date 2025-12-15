@@ -2,7 +2,9 @@ package przepisy
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
+	"time"
 
 	"przepisyapi/internal/crypto"
 	"przepisyapi/internal/mails"
@@ -25,7 +27,7 @@ type UpdateUserDto struct {
 }
 
 func (s *Server) AddUsersRoutes() {
-	s.Router.Post("/api/users/register", func(w http.ResponseWriter, r *http.Request) {
+	s.Router.With(h.WithRateLimit(s.loginRateLimiter)).Post("/api/users/register", func(w http.ResponseWriter, r *http.Request) {
 		dto, err := h.GetDto[CreateUserDto](r)
 		if err != nil {
 			h.ResBadRequest(w, err)
@@ -46,33 +48,64 @@ func (s *Server) AddUsersRoutes() {
 		go s.mailer.SendMail(s.agentID, mails.Options{
 			From:    "Przepisy",
 			To:      dto.Email,
-			Subject: "Potwierdź e-mail",
-			HTML:    fmt.Sprintf(`Oto kod do potwierdzenia maila: %s`, randomCode),
+			Subject: "[Przepisy] Potwierdź e-mail",
+			HTML: fmt.Sprintf(
+				`Oto kod do potwierdzenia maila: %s`+
+					`<br />`+
+					`<br />`+
+					`Możesz też kliknąć <a href="%s/api/users/%s/confirm?code=%s">tutaj</a> aby automatycznie potwierdzić mail.`,
+				randomCode,
+				s.FrontendUrl,
+				newuser.ID,
+				randomCode),
 		})
 		h.ResSuccess(w, newuser)
 	})
 
+	s.Router.With(h.WithRateLimit(s.confirmCodeRateLimiter)).Get("/api/users/{id}/confirm", func(w http.ResponseWriter, r *http.Request) {
+		code := r.URL.Query().Get("code")
+		userId := chi.URLParam(r, "id")
+		slog.Info("confirm code action", "code", code, "user id", userId)
+		user, err := s.Db.Queries.GetUserByID(r.Context(), userId)
+		if err != nil {
+			h.ResNotFound(w, "user")
+			return
+		}
+		if user.EmailConfirmedAt != nil || user.EmailConfirmCode == nil {
+			h.ResErr(w, fmt.Errorf("email already confirmed"))
+			return
+		}
+		if *user.EmailConfirmCode != code {
+			h.ResErr(w, fmt.Errorf("invalid confirm code"))
+			return
+		}
+		now := time.Now()
+		err = s.Db.Queries.UpdateUser(r.Context(), sqlc.UpdateUserParams{
+			ID:               user.ID,
+			EmailConfirmedAt: &now,
+			EmailConfirmCode: nil,
+		})
+		if err != nil {
+			h.ResErr(w, err)
+			return
+		}
+		updatedUser, err := s.Db.Queries.GetUserByID(r.Context(), user.ID)
+		if err != nil {
+			h.ResErr(w, err)
+			return
+		}
+		token, err := s.auther.GetToken(&updatedUser)
+		if err != nil {
+			h.ResErr(w, err)
+			return
+		}
+		h.ResSuccess(w, map[string]string{
+			"token": token,
+		})
+	})
+
 	auth := s.Router.With(chii.WithAuth(s.auther))
 	auth.Route("/api/users", func(r chi.Router) {
-		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-			users, err := s.Db.Queries.ListUsers(r.Context())
-			if err != nil {
-				h.ResErr(w, err)
-				return
-			}
-			h.ResSuccess(w, users)
-		})
-
-		r.Get("/{id}", func(w http.ResponseWriter, r *http.Request) {
-			id := chi.URLParam(r, "id")
-			fetchedUser, err := s.Db.Queries.GetUserByID(r.Context(), id)
-			if err != nil {
-				h.ResNotFound(w, "user")
-				return
-			}
-			h.ResSuccess(w, fetchedUser)
-		})
-
 		// TODO: confirmed account / admins / permissions
 		// r.Put("/{id}", func(w http.ResponseWriter, r *http.Request) {
 		// 	user := chii.GetUser[sqlc.User](r)

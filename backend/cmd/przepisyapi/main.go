@@ -15,6 +15,7 @@ import (
 var secretsClient *secretssdk.Client
 
 type CliOptions struct {
+	FrontendUrl    string `env:"FRONTEND_URL" envDefault:"https://przepisy.cyber-man.pl"`
 	Address        string `env:"ADDRESS" envDefault:"127.0.0.1:7771"`
 	DbPath         string `env:"DB_PATH" envDefault:"./przepisy.sqlite"`
 	SecretsAddress string `env:"SECRETS_ADDRESS" envDefault:"https://secrets.cyber-man.pl"`
@@ -43,6 +44,7 @@ func main() {
 			}
 
 			srv, err := przepisy.New(
+				opts.FrontendUrl,
 				opts.Address,
 				opts.AllowedOrigins,
 				opts.DbPath,
@@ -57,6 +59,7 @@ func main() {
 	}
 
 	// flags override env/defaults
+	rootCmd.Flags().StringVar(&opts.FrontendUrl, "frontend-url", opts.FrontendUrl, "frontend url to send the users to")
 	rootCmd.Flags().StringVar(&opts.Address, "address", opts.Address, "listen address")
 	rootCmd.Flags().StringVar(&opts.DbPath, "db-path", opts.DbPath, "path to sqlite db")
 	rootCmd.Flags().StringVar(&opts.AllowedOrigins, "allowed-origins", opts.AllowedOrigins, "comma-separated list of allowed CORS origins")
